@@ -145,7 +145,7 @@ type Rego struct {
 	store            storage.Store
 	txn              storage.Transaction
 	metrics          metrics.Metrics
-	tracer           topdown.Tracer
+	tracer           map[topdown.Tracer]struct{}
 	instrumentation  *topdown.Instrumentation
 	instrument       bool
 	capture          map[*ast.Expr]ast.Var // map exprs to generated capture vars
@@ -297,7 +297,7 @@ func Instrument(yes bool) func(r *Rego) {
 func Tracer(t topdown.Tracer) func(r *Rego) {
 	return func(r *Rego) {
 		if t != nil {
-			r.tracer = t
+			r.tracer[t] = struct{}{}
 		}
 	}
 }
@@ -315,6 +315,7 @@ func New(options ...func(*Rego)) *Rego {
 
 	r := &Rego{
 		capture: map[*ast.Expr]ast.Var{},
+		tracer:  map[topdown.Tracer]struct{}{},
 	}
 
 	for _, option := range options {
@@ -651,7 +652,9 @@ func (r *Rego) eval(ctx context.Context, qc ast.QueryCompiler, compiled ast.Body
 		WithRuntime(r.runtime)
 
 	if r.tracer != nil {
-		q = q.WithTracer(r.tracer)
+		for t := range r.tracer {
+			q = q.WithTracer(t)
+		}
 	}
 
 	if r.input != nil {
@@ -788,7 +791,9 @@ func (r *Rego) partial(ctx context.Context, compiled ast.Body, txn storage.Trans
 		WithRuntime(r.runtime)
 
 	if r.tracer != nil {
-		q = q.WithTracer(r.tracer)
+		for t := range r.tracer {
+			q = q.WithTracer(t)
+		}
 	}
 
 	if r.input != nil {

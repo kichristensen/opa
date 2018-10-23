@@ -204,8 +204,17 @@ func builtinTrace(bctx BuiltinContext, args []*ast.Term, iter func(*ast.Term) er
 		return handleBuiltinErr(ast.Trace.Name, bctx.Location, err)
 	}
 
-	if bctx.Tracer == nil || !bctx.Tracer.Enabled() {
-		return iter(ast.BooleanTerm(true))
+	var enabledTracers []Tracer
+	if bctx.Tracer == nil {
+		for t := range bctx.Tracer {
+			if t.Enabled() {
+				enabledTracers = append(enabledTracers, t)
+			}
+		}
+
+		if len(enabledTracers) == 0 {
+			return iter(ast.BooleanTerm(true))
+		}
 	}
 
 	evt := &Event{
@@ -214,7 +223,10 @@ func builtinTrace(bctx BuiltinContext, args []*ast.Term, iter func(*ast.Term) er
 		ParentID: bctx.ParentID,
 		Message:  string(str),
 	}
-	bctx.Tracer.Trace(evt)
+
+	for _, t := range enabledTracers {
+		t.Trace(evt)
+	}
 
 	return iter(ast.BooleanTerm(true))
 }

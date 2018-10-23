@@ -26,7 +26,7 @@ type Query struct {
 	store            storage.Store
 	txn              storage.Transaction
 	input            *ast.Term
-	tracer           Tracer
+	tracer           map[Tracer]struct{}
 	unknowns         []*ast.Term
 	partialNamespace string
 	metrics          metrics.Metrics
@@ -40,6 +40,7 @@ func NewQuery(query ast.Body) *Query {
 	return &Query{
 		query:        query,
 		genvarprefix: ast.WildcardPrefix,
+		tracer:       map[Tracer]struct{}{},
 	}
 }
 
@@ -78,7 +79,7 @@ func (q *Query) WithInput(input *ast.Term) *Query {
 
 // WithTracer sets the query tracer to use during evaluation. This is optional.
 func (q *Query) WithTracer(tracer Tracer) *Query {
-	q.tracer = tracer
+	q.tracer[tracer] = struct{}{}
 	return q
 }
 
